@@ -16,33 +16,45 @@ app = FastAPI(
     title="Bookstore Inventory API",
     version="1.0.0"
 )
+
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request: Request, exc: HTTPException):
     return JSONResponse(
         status_code=exc.status_code,
         content={
-            "error": exc.detail,
-            "status_code": exc.status_code
+            "success": False,
+            "status_code": exc.status_code,
+            "message": exc.detail,
+            "timestamp": datetime.utcnow().isoformat(),
+            "path": request.url.path,
         },
     )
-
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
     return JSONResponse(
         status_code=422,
         content={
-            "error": "Validation Error",
-            "details": exc.errors()
+            "success": False,
+            "status_code": 422,
+            "message": "Validation Error",
+            "errors": exc.errors(),
+            "timestamp": datetime.utcnow().isoformat(),
+            "path": request.url.path,
         },
     )
+
 
 @app.exception_handler(Exception)
 async def general_exception_handler(request: Request, exc: Exception):
     return JSONResponse(
         status_code=500,
         content={
-            "error": "Internal Server Error"
+            "success": False,
+            "status_code": 500,
+            "message": "Internal Server Error",
+            "timestamp": datetime.utcnow().isoformat(),
+            "path": request.url.path,
         },
     )
 
