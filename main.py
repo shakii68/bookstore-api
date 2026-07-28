@@ -356,3 +356,68 @@ def update_stock(
     session.refresh(book)
 
     return book
+
+from uuid import uuid4
+
+# Temporary in-memory storage for reset tokens
+password_reset_tokens = {}
+
+
+@app.post("/forgot-password")
+def forgot_password(email: str, session: Session = Depends(get_session)):
+  
+
+    user = session.exec(
+        select(User).where(User.email == email)
+    ).first()
+
+    if not user:
+        raise HTTPException(
+            status_code=404,
+            detail="User not found"
+        )
+
+    reset_token = str(uuid4())
+
+    password_reset_tokens[reset_token] = user.id
+
+    return {
+        "message": "Password reset token generated.",
+        "reset_token": reset_token
+    }
+
+
+@app.post("/reset-password")
+def reset_password(
+    token: str,
+    new_password: str,
+    session: Session = Depends(get_session)
+):
+   
+
+    if token not in password_reset_tokens:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid or expired reset token"
+        )
+
+    user_id = password_reset_tokens[token]
+
+    user = session.get(User, user_id)
+
+    if not user:
+        raise HTTPException(
+            status_code=404,
+            detail="User not found"
+        )
+
+    user.hashed_password = hash_password(new_password)
+
+    session.add(user)
+    session.commit()
+
+    del password_reset_tokens[token]
+
+    return {
+        "message": "Password reset successful."
+    }
